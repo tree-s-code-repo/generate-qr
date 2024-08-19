@@ -1,5 +1,3 @@
-const baserUrl = '';
-
 async function generateQRCode(url, imgUrl, size) {
   try {
     // Generate QR code as a Data URL
@@ -9,17 +7,22 @@ async function generateQRCode(url, imgUrl, size) {
     const qrImg = new Image();
     qrImg.src = qrCodeDataURL;
 
-    const logoDataURL = await picToBase64('./img.png');
+    // Load the logo image and handle the onload event
     const logoImg = new Image();
-    logoImg.src = logoDataURL;
+    logoImg.src = await picToBase64('./img.png');
 
-    // Combine images
-    const combinedImageDataURL = combineImages(qrImg, logoImg, size);
+    logoImg.onload = () => {
+      // Combine images after the logo image has loaded
+      const combinedImageDataURL = combineImages(qrImg, logoImg, size);
 
-    // Display the combined image
-    displayQr(combinedImageDataURL);
+      // Display the combined image
+      displayQr(combinedImageDataURL);
+      return combinedImageDataURL;
+    };
 
-    return combinedImageDataURL;
+    logoImg.onerror = () => {
+      console.error('Failed to load the logo image');
+    };
   } catch (error) {
     console.error(error);
     alert('Failed to generate QR code');
@@ -27,13 +30,14 @@ async function generateQRCode(url, imgUrl, size) {
 }
 
 // Calculate the size and position of the logo
-function getLogoSize(qrSize) {
+function getLogoSize(qrSize, padding) {
   const logoSize = qrSize / 5;
-  const logoX = (qrSize - logoSize) / 2;
-  const logoY = (qrSize - logoSize) / 2;
-  return { logoSize, logoX, logoY };
-}
+  const logoBackgroundSize = logoSize + padding * 2; // White background size
+  const logoX = (qrSize - logoBackgroundSize) / 2;
+  const logoY = (qrSize - logoBackgroundSize) / 2;
 
+  return { logoSize, logoBackgroundSize, logoX, logoY, padding };
+}
 function combineImages(qrImg, logoImg, qrSize) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -44,10 +48,25 @@ function combineImages(qrImg, logoImg, qrSize) {
 
   // Draw QR code
   ctx.drawImage(qrImg, 0, 0, qrSize, qrSize);
-  const { logoSize, logoX, logoY } = getLogoSize(qrSize);
 
-  // Draw logo in the center of the QR code
-  ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+  // Calculate the size and position of the logo
+  const padding = 5; // Adjust this value to match your padding
+  const { logoSize, logoBackgroundSize, logoX, logoY } = getLogoSize(
+    qrSize,
+    padding
+  );
+
+  // Draw the white background square (centered)
+  ctx.fillStyle = 'white';
+  ctx.fillRect(logoX, logoY, logoBackgroundSize, logoBackgroundSize);
+
+  // Calculate the position for the logo within the white background
+  const logoInnerX = logoX + padding; // Center the logo inside the white background
+  const logoInnerY = logoY + padding;
+
+  // Draw the logo image
+  ctx.drawImage(logoImg, logoInnerX, logoInnerY, logoSize, logoSize);
+
   // Return combined image as Data URL
   return canvas.toDataURL();
 }
