@@ -14,10 +14,10 @@ async function generateQRCode(url, imgUrl, size) {
     logoImg.onload = () => {
       // Combine images after the logo image has loaded
       const combinedImageDataURL = combineImages(qrImg, logoImg, size);
+      console.log(combinedImageDataURL);
 
       // Display the combined image
       displayQr(combinedImageDataURL);
-      return combinedImageDataURL;
     };
 
     logoImg.onerror = () => {
